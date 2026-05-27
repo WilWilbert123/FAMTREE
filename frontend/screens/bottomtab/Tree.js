@@ -202,11 +202,11 @@ export default function Tree() {
     }
   };
 
-  // FIXED: Professional Family Tree Layout Algorithm with correct spouse positioning
+ 
   const computeTreeLayout = useCallback((nodesList, edgesList) => {
     if (nodesList.length === 0) return [];
 
-    // Build relationship map
+   
     const nodeMap = new Map();
     nodesList.forEach(node => {
       nodeMap.set(node.id, {
@@ -241,7 +241,7 @@ export default function Tree() {
       }
     });
 
-    // Find root nodes (people with no parents)
+    
     let roots = Array.from(nodeMap.values()).filter(node => !node.hasParent);
 
     if (roots.length === 0 && nodesList.length > 0) {
