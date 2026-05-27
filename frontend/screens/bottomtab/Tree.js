@@ -1,4 +1,3 @@
-// Complete updated Tree.js with PROPER family tree layout - FIXED
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
@@ -36,9 +35,11 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 // Configuration Constants
 const NODE_SIZE = 100;
 const NODE_SIZE_SMALL = 85;
-const GENERATION_GAP = 160;
-const SIBLING_SPACING = 220;
-const COUPLE_SPACING = 250;
+const GENERATION_GAP = 260;
+const SIBLING_SPACING = 250;
+const COUPLE_SPACING = 850;
+ 
+
 
 export default function Tree() {
   const { theme } = useTheme();
@@ -50,13 +51,13 @@ export default function Tree() {
   const [selectedMember, setSelectedMember] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [familyRelations, setFamilyRelations] = useState({ spouse: null, mother: null, father: null, children: [] });
-  
+
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
   const [currentTreeId, setCurrentTreeId] = useState(null);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [showLabels, setShowLabels] = useState(true);
-  
+
   const [isAddingNode, setIsAddingNode] = useState(false);
   const [parentNodeId, setParentNodeId] = useState(null);
   const [relationType, setRelationType] = useState('child');
@@ -82,7 +83,7 @@ export default function Tree() {
     try {
       setLoading(true);
       const savedTreeId = await AsyncStorage.getItem('currentTreeId');
-      
+
       if (savedTreeId) {
         await loadTreeData(savedTreeId);
       } else if (user) {
@@ -100,7 +101,7 @@ export default function Tree() {
   const loadTreeData = async (treeId) => {
     try {
       const response = await treeService.getTree(treeId);
-      
+
       if (response.success) {
         setNodes(response.nodes || []);
         setEdges(response.edges || []);
@@ -117,7 +118,7 @@ export default function Tree() {
     try {
       const treeName = `${user?.name || 'My'}'s Family Tree`;
       const response = await treeService.createTree(treeName);
-      
+
       if (response.success && response.tree) {
         setCurrentTreeId(response.tree._id);
         await AsyncStorage.setItem('currentTreeId', response.tree._id);
@@ -143,24 +144,24 @@ export default function Tree() {
   const saveMemberToDB = async (memberData, parentId = null, type = 'child') => {
     try {
       setIsSaving(true);
-      
+
       let birthDate = null;
       let deathDate = null;
-      
+
       if (memberData.birthYear && memberData.birthYear.length > 0) {
         const year = parseInt(memberData.birthYear);
         if (!isNaN(year) && year > 0 && year < 3000) {
           birthDate = new Date(year, 0, 1).toISOString();
         }
       }
-      
+
       if (memberData.deathYear && memberData.deathYear.length > 0) {
         const year = parseInt(memberData.deathYear);
         if (!isNaN(year) && year > 0 && year < 3000) {
           deathDate = new Date(year, 0, 1).toISOString();
         }
       }
-      
+
       const memberToSave = {
         name: memberData.name,
         birthDate: birthDate,
@@ -184,7 +185,7 @@ export default function Tree() {
       }
 
       const response = await treeService.addMember(memberToSave);
-      
+
       if (response.success && response.member) {
         if (type === 'spouse' && parentId) {
           await treeService.updateMember(parentId, { spouse: response.member._id });
@@ -201,11 +202,11 @@ export default function Tree() {
     }
   };
 
-  // FIXED: Professional Family Tree Layout Algorithm with correct spouse positioning
+ 
   const computeTreeLayout = useCallback((nodesList, edgesList) => {
     if (nodesList.length === 0) return [];
-    
-    // Build relationship map
+
+   
     const nodeMap = new Map();
     nodesList.forEach(node => {
       nodeMap.set(node.id, {
@@ -240,24 +241,24 @@ export default function Tree() {
       }
     });
 
-    // Find root nodes (people with no parents)
-    let roots = Array.from(nodeMap.values()).filter(node => !node.hasParent);
     
+    let roots = Array.from(nodeMap.values()).filter(node => !node.hasParent);
+
     if (roots.length === 0 && nodesList.length > 0) {
       roots = [Array.from(nodeMap.values())[0]];
     }
-    
+
     if (roots.length === 0) return [];
-    
+
     const layoutNodes = [];
     const processed = new Set();
-    
+
     // Assign generations
     const assignGenerations = (node, gen) => {
       if (processed.has(node.id)) return;
       processed.add(node.id);
       node.generation = gen;
-      
+
       if (node.spouse) {
         const spouse = nodeMap.get(node.spouse);
         if (spouse && !processed.has(spouse.id)) {
@@ -265,7 +266,7 @@ export default function Tree() {
           processed.add(spouse.id);
         }
       }
-      
+
       node.children.forEach(childId => {
         const child = nodeMap.get(childId);
         if (child && !processed.has(child.id)) {
@@ -273,9 +274,9 @@ export default function Tree() {
         }
       });
     };
-    
+
     roots.forEach(root => assignGenerations(root, 0));
-    
+
     // Group by generation
     const generations = new Map();
     Array.from(nodeMap.values()).forEach(node => {
@@ -285,20 +286,20 @@ export default function Tree() {
       }
       generations.get(gen).push(node);
     });
-    
+
     const sortedGenerations = Array.from(generations.keys()).sort((a, b) => a - b);
     const startY = 100;
-    
+
     // First pass: Position couples and single nodes
     sortedGenerations.forEach((gen, genIndex) => {
       const genNodes = generations.get(gen);
       const y = startY + (genIndex * GENERATION_GAP);
       const processedInGen = new Set();
       let currentX = 200;
-      
+
       genNodes.forEach(node => {
         if (processedInGen.has(node.id)) return;
-        
+
         // If node has a spouse and spouse not processed yet
         if (node.spouse && !processedInGen.has(node.spouse)) {
           const spouse = nodeMap.get(node.spouse);
@@ -309,7 +310,7 @@ export default function Tree() {
             node.x = currentX + NODE_SIZE + COUPLE_SPACING;
             spouse.y = y;
             node.y = y;
-            
+
             processedInGen.add(node.id);
             processedInGen.add(spouse.id);
             currentX += (NODE_SIZE * 2) + COUPLE_SPACING + SIBLING_SPACING;
@@ -322,17 +323,17 @@ export default function Tree() {
         }
       });
     });
-    
+
     // Second pass: Center children under parents
     const positionChildren = (node) => {
       if (!node.children || node.children.length === 0) return;
-      
+
       const childrenNodes = node.children.map(childId => nodeMap.get(childId)).filter(c => c);
       if (childrenNodes.length === 0) return;
-      
+
       // Calculate the center X position of the parent couple
       let parentCenterX = node.x + NODE_SIZE / 2;
-      
+
       // If parent has a spouse, center between them
       if (node.spouse) {
         const spouse = nodeMap.get(node.spouse);
@@ -340,11 +341,11 @@ export default function Tree() {
           parentCenterX = (node.x + spouse.x + NODE_SIZE) / 2;
         }
       }
-      
+
       // Calculate total width of children
       const totalChildrenWidth = (childrenNodes.length - 1) * SIBLING_SPACING + NODE_SIZE;
       const startChildX = parentCenterX - (totalChildrenWidth / 2);
-      
+
       // Position children
       childrenNodes.forEach((child, index) => {
         const childX = startChildX + (index * SIBLING_SPACING);
@@ -353,29 +354,29 @@ export default function Tree() {
         positionChildren(child);
       });
     };
-    
+
     // Apply child positioning for all roots
     roots.forEach(root => {
       positionChildren(root);
     });
-    
+
     // Collect all positioned nodes
     Array.from(nodeMap.values()).forEach(node => {
       layoutNodes.push(node);
     });
-    
+
     // Center the entire tree horizontally
     if (layoutNodes.length > 0) {
       const minX = Math.min(...layoutNodes.map(n => n.x));
       const maxX = Math.max(...layoutNodes.map(n => n.x + NODE_SIZE));
       const treeWidth = maxX - minX;
       const offsetX = (SCREEN_WIDTH / 2) - (minX + treeWidth / 2);
-      
+
       layoutNodes.forEach(node => {
         node.x += offsetX;
       });
     }
-    
+
     return layoutNodes;
   }, []);
 
@@ -485,7 +486,7 @@ export default function Tree() {
       Alert.alert('Error', 'Please enter a name');
       return;
     }
-    
+
     const newMember = await saveMemberToDB({
       name: formName,
       birthYear: formBirth,
@@ -494,7 +495,7 @@ export default function Tree() {
       location: formLocation,
       image: formImage
     });
-    
+
     if (newMember) {
       await loadTreeData(currentTreeId);
       clearForm();
@@ -507,7 +508,7 @@ export default function Tree() {
       Alert.alert('Error', 'Please enter a name');
       return;
     }
-    
+
     const newMember = await saveMemberToDB({
       name: formName,
       birthYear: formBirth,
@@ -516,7 +517,7 @@ export default function Tree() {
       location: formLocation,
       image: formImage
     }, parentNodeId, relationType);
-    
+
     if (newMember) {
       await loadTreeData(currentTreeId);
       clearForm();
@@ -558,7 +559,7 @@ export default function Tree() {
 
   const getNodeStyle = (node) => {
     const nodeSize = node.generation === 0 ? NODE_SIZE : NODE_SIZE_SMALL;
-    
+
     let borderColor, bgColor;
     if (node.generation === 0) {
       borderColor = '#FFD700';
@@ -570,7 +571,7 @@ export default function Tree() {
       borderColor = '#4A90E2';
       bgColor = 'rgba(74, 144, 226, 0.15)';
     }
-    
+
     return {
       position: 'absolute',
       width: nodeSize,
@@ -590,334 +591,334 @@ export default function Tree() {
     };
   };
 
-// ENHANCED: Traditional Family Tree Connection Lines
-// ULTRA FAMILY TREE CONNECTION SYSTEM
-const renderConnectionLines = () => {
-  const lines = [];
+  // ENHANCED: Traditional Family Tree Connection Lines
+  // ULTRA FAMILY TREE CONNECTION SYSTEM
+  const renderConnectionLines = () => {
+    const lines = [];
 
-  // ==========================================
-  // HELPERS
-  // ==========================================
+    // ==========================================
+    // HELPERS
+    // ==========================================
 
-  const getNodeSize = (node) => {
-    return node.generation === 0
-      ? NODE_SIZE
-      : NODE_SIZE_SMALL;
-  };
+    const getNodeSize = (node) => {
+      return node.generation === 0
+        ? NODE_SIZE
+        : NODE_SIZE_SMALL;
+    };
 
-  const getNodeById = (id) => {
-    return activeNodes.find(n => n.id === id);
-  };
+    const getNodeById = (id) => {
+      return activeNodes.find(n => n.id === id);
+    };
 
-  // ==========================================
-  // BUILD CHILD MAP
-  // ==========================================
+    // ==========================================
+    // BUILD CHILD MAP
+    // ==========================================
 
-  const childrenMap = {};
+    const childrenMap = {};
 
-  edges.forEach(edge => {
-    if (edge.type === 'parent-child') {
-      if (!childrenMap[edge.from]) {
-        childrenMap[edge.from] = [];
+    edges.forEach(edge => {
+      if (edge.type === 'parent-child') {
+        if (!childrenMap[edge.from]) {
+          childrenMap[edge.from] = [];
+        }
+
+        childrenMap[edge.from].push(edge.to);
+      }
+    });
+
+    // ==========================================
+    // PREVENT DUPLICATES
+    // ==========================================
+
+    const renderedFamilies = new Set();
+
+    // ==========================================
+    // MAIN FAMILY RENDER
+    // ==========================================
+
+    const renderFamily = (person) => {
+      if (!person) return;
+
+      // ==========================================
+      // SPOUSE
+      // ==========================================
+
+      let spouse = null;
+
+      if (person.spouse) {
+        spouse = getNodeById(person.spouse);
       }
 
-      childrenMap[edge.from].push(edge.to);
-    }
-  });
+      // ==========================================
+      // UNIQUE FAMILY KEY
+      // ==========================================
 
-  // ==========================================
-  // PREVENT DUPLICATES
-  // ==========================================
+      const familyKey = spouse
+        ? [person.id, spouse.id].sort().join('-')
+        : `single-${person.id}`;
 
-  const renderedFamilies = new Set();
+      if (renderedFamilies.has(familyKey)) {
+        return;
+      }
 
-  // ==========================================
-  // MAIN FAMILY RENDER
-  // ==========================================
+      renderedFamilies.add(familyKey);
 
-  const renderFamily = (person) => {
-    if (!person) return;
+      // ==========================================
+      // POSITION DATA
+      // ==========================================
 
-    // ==========================================
-    // SPOUSE
-    // ==========================================
+      const personSize = getNodeSize(person);
 
-    let spouse = null;
+      let coupleCenterX = person.x;
+      let coupleY = person.y;
 
-    if (person.spouse) {
-      spouse = getNodeById(person.spouse);
-    }
+      // ==========================================
+      // DRAW SPOUSE CONNECTION
+      // ==========================================
 
-    // ==========================================
-    // UNIQUE FAMILY KEY
-    // ==========================================
+      if (spouse) {
+        const spouseSize = getNodeSize(spouse);
 
-    const familyKey = spouse
-      ? [person.id, spouse.id].sort().join('-')
-      : `single-${person.id}`;
+        const leftNode =
+          person.x < spouse.x
+            ? person
+            : spouse;
 
-    if (renderedFamilies.has(familyKey)) {
-      return;
-    }
+        const rightNode =
+          person.x < spouse.x
+            ? spouse
+            : person;
 
-    renderedFamilies.add(familyKey);
+        const leftSize = getNodeSize(leftNode);
+        const rightSize = getNodeSize(rightNode);
 
-    // ==========================================
-    // POSITION DATA
-    // ==========================================
+        const startX =
+          leftNode.x + leftSize / 2;
 
-    const personSize = getNodeSize(person);
+        const endX =
+          rightNode.x - rightSize / 2;
 
-    let coupleCenterX = person.x;
-    let coupleY = person.y;
+        const lineY = leftNode.y;
 
-    // ==========================================
-    // DRAW SPOUSE CONNECTION
-    // ==========================================
-
-    if (spouse) {
-      const spouseSize = getNodeSize(spouse);
-
-      const leftNode =
-        person.x < spouse.x
-          ? person
-          : spouse;
-
-      const rightNode =
-        person.x < spouse.x
-          ? spouse
-          : person;
-
-      const leftSize = getNodeSize(leftNode);
-      const rightSize = getNodeSize(rightNode);
-
-      const startX =
-        leftNode.x + leftSize / 2;
-
-      const endX =
-        rightNode.x - rightSize / 2;
-
-      const lineY = leftNode.y;
-
-      // HUSBAND/WIFE LINE
-      lines.push(
-        <View
-          key={`spouse-line-${familyKey}`}
-          style={{
-            position: 'absolute',
-            left: startX,
-            top: lineY,
-            width: endX - startX,
-            height: 4,
-            backgroundColor: '#E91E63',
-            borderRadius: 4,
-            zIndex: 1,
-          }}
-        />
-      );
-
-      // HEART
-      lines.push(
-        <View
-          key={`heart-${familyKey}`}
-          style={{
-            position: 'absolute',
-            left:
-              (startX + endX) / 2 - 10,
-            top: lineY - 10,
-            width: 20,
-            height: 20,
-            borderRadius: 10,
-            backgroundColor: '#E91E63',
-            justifyContent: 'center',
-            alignItems: 'center',
-            zIndex: 5,
-          }}
-        >
-          <Text
+        // HUSBAND/WIFE LINE
+        lines.push(
+          <View
+            key={`spouse-line-${familyKey}`}
             style={{
-              color: '#fff',
-              fontSize: 10,
+              position: 'absolute',
+              left: startX,
+              top: lineY,
+              width: endX - startX,
+              height: 4,
+              backgroundColor: '#E91E63',
+              borderRadius: 4,
+              zIndex: 1,
+            }}
+          />
+        );
+
+        // HEART
+        lines.push(
+          <View
+            key={`heart-${familyKey}`}
+            style={{
+              position: 'absolute',
+              left:
+                (startX + endX) / 2 - 10,
+              top: lineY - 10,
+              width: 20,
+              height: 20,
+              borderRadius: 10,
+              backgroundColor: '#E91E63',
+              justifyContent: 'center',
+              alignItems: 'center',
+              zIndex: 5,
             }}
           >
-            ❤
-          </Text>
-        </View>
+            <Text
+              style={{
+                color: '#fff',
+                fontSize: 10,
+              }}
+            >
+              ❤
+            </Text>
+          </View>
+        );
+
+        // TRUE CENTER OF COUPLE
+        coupleCenterX =
+          (leftNode.x + rightNode.x) / 2;
+
+        coupleY = leftNode.y;
+      }
+
+      // ==========================================
+      // GET CHILDREN
+      // ==========================================
+
+      const ownChildren =
+        childrenMap[person.id] || [];
+
+      // REMOVE DUPLICATES
+      const uniqueChildren = [
+        ...new Set(ownChildren),
+      ];
+
+      const children = uniqueChildren
+        .map(id => getNodeById(id))
+        .filter(Boolean);
+
+      if (children.length === 0) {
+        return;
+      }
+
+      // ==========================================
+      // CHILD POSITION RANGE
+      // ==========================================
+
+      const childXs = children.map(
+        child => child.x
       );
 
-      // TRUE CENTER OF COUPLE
-      coupleCenterX =
-        (leftNode.x + rightNode.x) / 2;
+      const minChildX = Math.min(...childXs);
+      const maxChildX = Math.max(...childXs);
 
-      coupleY = leftNode.y;
-    }
+      // ==========================================
+      // VERTICAL START
+      // ==========================================
 
-    // ==========================================
-    // GET CHILDREN
-    // ==========================================
+      const startY =
+        coupleY + personSize / 2;
 
-    const ownChildren =
-      childrenMap[person.id] || [];
+      // SPACE BETWEEN PARENT + CHILDREN
+      const siblingLineY = startY + 60;
 
-    // REMOVE DUPLICATES
-    const uniqueChildren = [
-      ...new Set(ownChildren),
-    ];
+      // ==========================================
+      // CENTER DOWN LINE
+      // ==========================================
 
-    const children = uniqueChildren
-      .map(id => getNodeById(id))
-      .filter(Boolean);
-
-    if (children.length === 0) {
-      return;
-    }
-
-    // ==========================================
-    // CHILD POSITION RANGE
-    // ==========================================
-
-    const childXs = children.map(
-      child => child.x
-    );
-
-    const minChildX = Math.min(...childXs);
-    const maxChildX = Math.max(...childXs);
-
-    // ==========================================
-    // VERTICAL START
-    // ==========================================
-
-    const startY =
-      coupleY + personSize / 2;
-
-    // SPACE BETWEEN PARENT + CHILDREN
-    const siblingLineY = startY + 60;
-
-    // ==========================================
-    // CENTER DOWN LINE
-    // ==========================================
-
-    lines.push(
-      <View
-        key={`center-down-${familyKey}`}
-        style={{
-          position: 'absolute',
-          left: coupleCenterX - 1.5,
-          top: startY,
-          width: 3,
-          height: siblingLineY - startY,
-          backgroundColor: '#FFD700',
-          zIndex: 1,
-        }}
-      />
-    );
-
-    // ==========================================
-    // HORIZONTAL SIBLING LINE
-    // ==========================================
-
-    lines.push(
-      <View
-        key={`siblings-${familyKey}`}
-        style={{
-          position: 'absolute',
-          left: minChildX,
-          top: siblingLineY,
-          width: maxChildX - minChildX,
-          height: 3,
-          backgroundColor: '#FFD700',
-          borderRadius: 3,
-          zIndex: 1,
-        }}
-      />
-    );
-
-    // ==========================================
-    // CONNECT EACH CHILD
-    // ==========================================
-
-    children.forEach(child => {
-      const childSize =
-        getNodeSize(child);
-
-      const childTopY =
-        child.y - childSize / 2;
-
-      // VERTICAL CHILD LINE
       lines.push(
         <View
-          key={`child-line-${child.id}`}
+          key={`center-down-${familyKey}`}
           style={{
             position: 'absolute',
-            left: child.x - 1.5,
-            top: siblingLineY,
+            left: coupleCenterX - 1.5,
+            top: startY,
             width: 3,
-            height:
-              childTopY - siblingLineY,
+            height: siblingLineY - startY,
             backgroundColor: '#FFD700',
             zIndex: 1,
           }}
         />
       );
 
-      // CONNECTION DOT
+      // ==========================================
+      // HORIZONTAL SIBLING LINE
+      // ==========================================
+
       lines.push(
         <View
-          key={`dot-${child.id}`}
+          key={`siblings-${familyKey}`}
           style={{
             position: 'absolute',
-            left: child.x - 4,
-            top: siblingLineY - 4,
-            width: 8,
-            height: 8,
-            borderRadius: 4,
+            left: minChildX,
+            top: siblingLineY,
+            width: maxChildX - minChildX,
+            height: 3,
             backgroundColor: '#FFD700',
-            zIndex: 2,
+            borderRadius: 3,
+            zIndex: 1,
           }}
         />
       );
 
       // ==========================================
-      // RECURSIVE RENDER
-      // THIS ENABLES:
-      // Child -> spouse -> children
-      // Grandchildren
-      // Great grandchildren
+      // CONNECT EACH CHILD
       // ==========================================
 
-      renderFamily(child);
+      children.forEach(child => {
+        const childSize =
+          getNodeSize(child);
+
+        const childTopY =
+          child.y - childSize / 2;
+
+        // VERTICAL CHILD LINE
+        lines.push(
+          <View
+            key={`child-line-${child.id}`}
+            style={{
+              position: 'absolute',
+              left: child.x - 1.5,
+              top: siblingLineY,
+              width: 3,
+              height:
+                childTopY - siblingLineY,
+              backgroundColor: '#FFD700',
+              zIndex: 1,
+            }}
+          />
+        );
+
+        // CONNECTION DOT
+        lines.push(
+          <View
+            key={`dot-${child.id}`}
+            style={{
+              position: 'absolute',
+              left: child.x - 4,
+              top: siblingLineY - 4,
+              width: 8,
+              height: 8,
+              borderRadius: 4,
+              backgroundColor: '#FFD700',
+              zIndex: 2,
+            }}
+          />
+        );
+
+        // ==========================================
+        // RECURSIVE RENDER
+        // THIS ENABLES:
+        // Child -> spouse -> children
+        // Grandchildren
+        // Great grandchildren
+        // ==========================================
+
+        renderFamily(child);
+      });
+    };
+
+    // ==========================================
+    // FIND ROOTS
+    // ==========================================
+
+    const roots = activeNodes.filter(node => {
+      return !edges.some(
+        edge =>
+          edge.type === 'parent-child' &&
+          edge.to === node.id
+      );
     });
+
+    // ==========================================
+    // START RENDERING TREE
+    // ==========================================
+
+    roots.forEach(root => {
+      renderFamily(root);
+    });
+
+    return lines;
   };
-
-  // ==========================================
-  // FIND ROOTS
-  // ==========================================
-
-  const roots = activeNodes.filter(node => {
-    return !edges.some(
-      edge =>
-        edge.type === 'parent-child' &&
-        edge.to === node.id
-    );
-  });
-
-  // ==========================================
-  // START RENDERING TREE
-  // ==========================================
-
-  roots.forEach(root => {
-    renderFamily(root);
-  });
-
-  return lines;
-};
 
   const renderNode = (node) => {
     const nodeStyle = getNodeStyle(node);
     const isDeceased = node.deathYear && node.deathYear.length > 0;
     const nodeSize = node.generation === 0 ? NODE_SIZE : NODE_SIZE_SMALL;
     const isRoot = node.generation === 0;
-    
+
     return (
       <TouchableOpacity
         key={`node-${node.id}`}
@@ -979,7 +980,7 @@ const renderConnectionLines = () => {
         <View style={styles.zoomIndicator}>
           <Text style={styles.zoomText}>{Math.round(zoomLevel * 100)}%</Text>
         </View>
-        
+
         <View style={[styles.blurSearchWrapper, { backgroundColor: 'rgba(0,0,0,0.8)', borderColor: 'rgba(255,215,0,0.3)' }]}>
           <Icon name="search" size={20} color="#FFD700" />
           <TextInput
@@ -996,8 +997,8 @@ const renderConnectionLines = () => {
 
         {nodes.length === 0 ? (
           <View style={styles.emptyState}>
-            <TouchableOpacity 
-              style={[styles.glassCard, styles.initialButton]} 
+            <TouchableOpacity
+              style={[styles.glassCard, styles.initialButton]}
               onPress={() => setIsAddingNode(true)}
             >
               <Icon name="account-tree" size={60} color="#FFD700" />
@@ -1017,7 +1018,7 @@ const renderConnectionLines = () => {
         {/* Member Details Modal */}
         <Modal animationType="fade" transparent visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
           <View style={styles.modalOverlay}>
-            <ScrollView 
+            <ScrollView
               contentContainerStyle={styles.modalScrollContent}
               refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
             >
@@ -1025,12 +1026,12 @@ const renderConnectionLines = () => {
                 <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
                   <Icon name="close" size={24} color="#fff" />
                 </TouchableOpacity>
-                
+
                 {selectedMember?.image && (
                   <Image source={{ uri: selectedMember.image }} style={styles.detailedModalAvatar} />
                 )}
                 <Text style={styles.modalTitle}>{selectedMember?.name}</Text>
-                
+
                 <View style={styles.lifeInfo}>
                   {selectedMember?.birthYear && (
                     <View style={styles.lifeBadge}>
@@ -1045,7 +1046,7 @@ const renderConnectionLines = () => {
                     </View>
                   )}
                 </View>
-                
+
                 <View style={styles.dataMetaGrid}>
                   <Text style={styles.modalText}>
                     <Icon name="wc" size={16} color="#FFD700" /> {selectedMember?.gender || 'N/A'}
@@ -1059,9 +1060,9 @@ const renderConnectionLines = () => {
 
                 <View style={styles.familyRelationsSection}>
                   <Text style={styles.sectionTitle}>Family Relations</Text>
-                  
+
                   {familyRelations.spouse && (
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.relationCard}
                       onPress={() => {
                         setSelectedMember(familyRelations.spouse);
@@ -1077,9 +1078,9 @@ const renderConnectionLines = () => {
                       <Icon name="chevron-right" size={20} color="rgba(255,255,255,0.5)" />
                     </TouchableOpacity>
                   )}
-                  
+
                   {familyRelations.mother && (
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.relationCard}
                       onPress={() => {
                         setSelectedMember(familyRelations.mother);
@@ -1095,9 +1096,9 @@ const renderConnectionLines = () => {
                       <Icon name="chevron-right" size={20} color="rgba(255,255,255,0.5)" />
                     </TouchableOpacity>
                   )}
-                  
+
                   {familyRelations.father && (
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.relationCard}
                       onPress={() => {
                         setSelectedMember(familyRelations.father);
@@ -1113,14 +1114,14 @@ const renderConnectionLines = () => {
                       <Icon name="chevron-right" size={20} color="rgba(255,255,255,0.5)" />
                     </TouchableOpacity>
                   )}
-                  
+
                   {familyRelations.children.length > 0 && (
                     <View style={styles.childrenSection}>
                       <Text style={styles.subsectionTitle}>
                         <Icon name="child-care" size={16} color="#FFD700" /> Children ({familyRelations.children.length})
                       </Text>
                       {familyRelations.children.map((child, index) => (
-                        <TouchableOpacity 
+                        <TouchableOpacity
                           key={index}
                           style={styles.childCard}
                           onPress={() => {
@@ -1144,7 +1145,7 @@ const renderConnectionLines = () => {
                 </View>
 
                 <View style={styles.actionButtonRow}>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={[styles.modalActionBtn, { backgroundColor: '#4A90E2' }]}
                     onPress={() => openAddRelativeModal(selectedMember, 'child')}
                   >
@@ -1152,7 +1153,160 @@ const renderConnectionLines = () => {
                     <Text style={styles.btnTxt}>Add Child</Text>
                   </TouchableOpacity>
                   {!familyRelations.spouse && (
-                    <TouchableOpacity 
+                    <TouchableOpacity
+                      style={[styles.modalActionBtn, { backgroundColor: '#E91E63' }]}
+                      onPress={() => openAddRelativeModal(selectedMember, 'spouse')}
+                    >
+                      <Icon name="favorite" size={20} color="#fff" />
+                      <Text style={styles.btnTxt}>Add Spouse</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            </ScrollView>
+          </View>
+        </Modal>
+
+        {/* Add Member Modal */}
+        {/* Member Details Modal */}
+        <Modal animationType="fade" transparent visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <ScrollView
+              contentContainerStyle={styles.modalScrollContent}
+              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+            >
+              <View style={styles.glassModalCard}>
+                <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
+                  <Icon name="close" size={24} color="#fff" />
+                </TouchableOpacity>
+
+                {selectedMember?.image && (
+                  <Image source={{ uri: selectedMember.image }} style={styles.detailedModalAvatar} />
+                )}
+                <Text style={styles.modalTitle}>{selectedMember?.name}</Text>
+
+                <View style={styles.lifeInfo}>
+                  {selectedMember?.birthYear && (
+                    <View style={styles.lifeBadge}>
+                      <Icon name="cake" size={16} color="#FFD700" />
+                      <Text style={styles.lifeText}>Born: {selectedMember.birthYear}</Text>
+                    </View>
+                  )}
+                  {selectedMember?.deathYear && (
+                    <View style={styles.lifeBadge}>
+                      <Icon name="cloud" size={16} color="#FFD700" />
+                      <Text style={styles.lifeText}>Died: {selectedMember.deathYear}</Text>
+                    </View>
+                  )}
+                </View>
+
+                <View style={styles.dataMetaGrid}>
+                  <Text style={styles.modalText}>
+                    <Icon name="wc" size={16} color="#FFD700" /> {selectedMember?.gender || 'N/A'}
+                  </Text>
+                  {selectedMember?.location && (
+                    <Text style={styles.modalText}>
+                      <Icon name="location-on" size={16} color="#FFD700" /> {selectedMember.location}
+                    </Text>
+                  )}
+                </View>
+
+                <View style={styles.familyRelationsSection}>
+                  <Text style={styles.sectionTitle}>Family Relations</Text>
+
+                  {familyRelations.spouse && (
+                    <TouchableOpacity
+                      style={styles.relationCard}
+                      onPress={() => {
+                        setSelectedMember(familyRelations.spouse);
+                        const relations = getFamilyRelations(familyRelations.spouse.id, nodes, edges);
+                        setFamilyRelations(relations);
+                      }}
+                    >
+                      <Icon name="favorite" size={20} color="#E91E63" />
+                      <View style={styles.relationInfo}>
+                        <Text style={styles.relationLabel}>Spouse</Text>
+                        <Text style={styles.relationName}>{familyRelations.spouse.name}</Text>
+                      </View>
+                      <Icon name="chevron-right" size={20} color="rgba(255,255,255,0.5)" />
+                    </TouchableOpacity>
+                  )}
+
+                  {familyRelations.mother && (
+                    <TouchableOpacity
+                      style={styles.relationCard}
+                      onPress={() => {
+                        setSelectedMember(familyRelations.mother);
+                        const relations = getFamilyRelations(familyRelations.mother.id, nodes, edges);
+                        setFamilyRelations(relations);
+                      }}
+                    >
+                      <Icon name="woman" size={20} color="#FF69B4" />
+                      <View style={styles.relationInfo}>
+                        <Text style={styles.relationLabel}>Mother</Text>
+                        <Text style={styles.relationName}>{familyRelations.mother.name}</Text>
+                      </View>
+                      <Icon name="chevron-right" size={20} color="rgba(255,255,255,0.5)" />
+                    </TouchableOpacity>
+                  )}
+
+                  {familyRelations.father && (
+                    <TouchableOpacity
+                      style={styles.relationCard}
+                      onPress={() => {
+                        setSelectedMember(familyRelations.father);
+                        const relations = getFamilyRelations(familyRelations.father.id, nodes, edges);
+                        setFamilyRelations(relations);
+                      }}
+                    >
+                      <Icon name="man" size={20} color="#4A90E2" />
+                      <View style={styles.relationInfo}>
+                        <Text style={styles.relationLabel}>Father</Text>
+                        <Text style={styles.relationName}>{familyRelations.father.name}</Text>
+                      </View>
+                      <Icon name="chevron-right" size={20} color="rgba(255,255,255,0.5)" />
+                    </TouchableOpacity>
+                  )}
+
+                  {familyRelations.children.length > 0 && (
+                    <View style={styles.childrenSection}>
+                      <Text style={styles.subsectionTitle}>
+                        <Icon name="child-care" size={16} color="#FFD700" /> Children ({familyRelations.children.length})
+                      </Text>
+                      {familyRelations.children.map((child, index) => (
+                        <TouchableOpacity
+                          key={index}
+                          style={styles.childCard}
+                          onPress={() => {
+                            setSelectedMember(child);
+                            const relations = getFamilyRelations(child.id, nodes, edges);
+                            setFamilyRelations(relations);
+                          }}
+                        >
+                          <View style={styles.childAvatar}>
+                            <Text style={styles.childInitial}>{child.name?.charAt(0) || '?'}</Text>
+                          </View>
+                          <View style={styles.childInfo}>
+                            <Text style={styles.childName}>{child.name}</Text>
+                            {child.birthYear && <Text style={styles.childYear}>Born: {child.birthYear}</Text>}
+                          </View>
+                          <Icon name="chevron-right" size={20} color="rgba(255,255,255,0.5)" />
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                </View>
+
+                <View style={styles.actionButtonRow}>
+                  <TouchableOpacity
+                    style={[styles.modalActionBtn, { backgroundColor: '#4A90E2' }]}
+                    onPress={() => openAddRelativeModal(selectedMember, 'child')}
+                  >
+                    <Icon name="child-care" size={20} color="#fff" />
+                    <Text style={styles.btnTxt}>Add Child</Text>
+                  </TouchableOpacity>
+                  {!familyRelations.spouse && (
+                    <TouchableOpacity
                       style={[styles.modalActionBtn, { backgroundColor: '#E91E63' }]}
                       onPress={() => openAddRelativeModal(selectedMember, 'spouse')}
                     >
@@ -1169,85 +1323,87 @@ const renderConnectionLines = () => {
         {/* Add Member Modal */}
         <Modal animationType="slide" transparent visible={isAddingNode} onRequestClose={() => setIsAddingNode(false)}>
           <View style={styles.modalOverlay}>
-            <View style={[styles.glassModalCard, { backgroundColor: 'rgba(20, 20, 25, 0.95)', maxHeight: '80%' }]}>
-              <ScrollView showsVerticalScrollIndicator={false}>
+            <View style={styles.glassModalCard}>
+              <ScrollView showsVerticalScrollIndicator={false} style={{ width: '100%' }}>
                 <Text style={styles.modalTitle}>
                   {nodes.length === 0 ? '🌳 Start Your Family Tree' : `➕ Add ${relationType === 'child' ? 'Child' : 'Spouse'}`}
                 </Text>
-                
+
                 <TouchableOpacity style={styles.avatarPickerTrigger} onPress={handlePickImage}>
                   {formImage ? (
                     <Image source={{ uri: formImage }} style={styles.formImagePreview} />
                   ) : (
                     <View style={styles.avatarPlaceholderLarge}>
-                      <Icon name="add-a-photo" size={40} color="rgba(255,255,255,0.6)" />
+                      <Icon name="add-a-photo" size={32} color="rgba(255,255,255,0.6)" />
                       <Text style={styles.avatarPickerText}>Add Photo</Text>
                     </View>
                   )}
                 </TouchableOpacity>
 
-                <TextInput 
-                  placeholder="Full Name *" 
-                  placeholderTextColor="rgba(255,255,255,0.4)" 
-                  style={styles.glassInput} 
-                  value={formName} 
-                  onChangeText={setFormName} 
+                <TextInput
+                  placeholder="Full Name *"
+                  placeholderTextColor="rgba(255,255,255,0.4)"
+                  style={styles.glassInput}
+                  value={formName}
+                  onChangeText={setFormName}
                 />
-                
+
                 <View style={styles.dateRow}>
-                  <TextInput 
-                    placeholder="Birth Year" 
-                    placeholderTextColor="rgba(255,255,255,0.4)" 
-                    keyboardType="numeric" 
-                    style={[styles.glassInput, { flex: 1, marginRight: 8 }]} 
-                    value={formBirth} 
-                    onChangeText={setFormBirth} 
+                  <TextInput
+                    placeholder="Birth date (DD-MM-YYYY)" // Clear format guide
+                    placeholderTextColor="rgba(255,255,255,0.4)"
+                    keyboardType="default" // Allows dashes
+                    maxLength={10} // Prevents over-typing
+                    style={styles.dateInput}
+                    value={formBirth}
+                    onChangeText={setFormBirth}
                   />
-                  <TextInput 
-                    placeholder="Death Year" 
-                    placeholderTextColor="rgba(255,255,255,0.4)" 
-                    keyboardType="numeric" 
-                    style={[styles.glassInput, { flex: 1 }]} 
-                    value={formDeath} 
-                    onChangeText={setFormDeath} 
+                  <TextInput
+                    placeholder="Death date (DD-MM-YYYY)"
+                    placeholderTextColor="rgba(255,255,255,0.4)"
+                    keyboardType="default"
+                    maxLength={10}
+                    style={styles.dateInput}
+                    value={formDeath}
+                    onChangeText={setFormDeath}
                   />
                 </View>
-                
+
                 <View style={styles.genderSelector}>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={[styles.genderOption, formGender === 'male' && styles.genderOptionActive]}
                     onPress={() => setFormGender('male')}
                   >
-                    <Icon name="male" size={24} color={formGender === 'male' ? '#fff' : 'rgba(255,255,255,0.6)'} />
+                    <Icon name="male" size={22} color={formGender === 'male' ? '#000' : 'rgba(255,255,255,0.6)'} />
                     <Text style={[styles.genderOptionText, formGender === 'male' && styles.genderOptionTextActive]}>Male</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={[styles.genderOption, formGender === 'female' && styles.genderOptionActive]}
                     onPress={() => setFormGender('female')}
                   >
-                    <Icon name="female" size={24} color={formGender === 'female' ? '#fff' : 'rgba(255,255,255,0.6)'} />
+                    <Icon name="female" size={22} color={formGender === 'female' ? '#000' : 'rgba(255,255,255,0.6)'} />
                     <Text style={[styles.genderOptionText, formGender === 'female' && styles.genderOptionTextActive]}>Female</Text>
                   </TouchableOpacity>
                 </View>
-                
-                <TextInput 
-                  placeholder="Location / Birthplace" 
-                  placeholderTextColor="rgba(255,255,255,0.4)" 
-                  style={styles.glassInput} 
-                  value={formLocation} 
-                  onChangeText={setFormLocation} 
+
+                <TextInput
+                  placeholder="Location / Birthplace"
+                  placeholderTextColor="rgba(255,255,255,0.4)"
+                  style={styles.glassInput}
+                  value={formLocation}
+                  onChangeText={setFormLocation}
                 />
 
                 <View style={styles.formButtonActions}>
-                  <TouchableOpacity 
-                    style={[styles.modalActionBtn, { backgroundColor: '#4CAF50', flex: 2, opacity: isSaving ? 0.6 : 1 }]} 
+                  <TouchableOpacity
+                    style={[styles.modalActionBtn, { backgroundColor: '#4CAF50', flex: 2, opacity: isSaving ? 0.6 : 1 }]}
                     onPress={nodes.length === 0 ? handleCreateRoot : handleAddRelative}
                     disabled={isSaving}
                   >
                     {isSaving ? <ActivityIndicator size="small" color="#fff" /> : (
                       <>
                         <Icon name="save" size={20} color="#fff" />
-                        <Text style={styles.btnTxt}>Save to Family Tree</Text>
+                        <Text style={styles.btnTxt}>Save</Text>
                       </>
                     )}
                   </TouchableOpacity>
@@ -1265,6 +1421,7 @@ const renderConnectionLines = () => {
   );
 }
 
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
@@ -1281,8 +1438,8 @@ const styles = StyleSheet.create({
   orbInnerContent: { width: '100%', height: '100%', borderRadius: 100, overflow: 'hidden', justifyContent: 'center', alignItems: 'center', position: 'relative' },
   avatarImage: { width: '100%', height: '100%' },
   avatarPlaceholder: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' },
-  avatarPlaceholderLarge: { width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: 'rgba(255,215,0,0.3)', borderStyle: 'dashed' },
-  avatarPickerText: { color: '#fff', fontSize: 12, marginTop: 8 },
+  avatarPlaceholderLarge: { width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: 'rgba(255,215,0,0.3)', borderStyle: 'dashed' },
+  avatarPickerText: { color: '#fff', fontSize: 11, marginTop: 6 },
   initialTextChar: { color: '#fff', fontSize: 40, fontWeight: 'bold' },
   rootText: { fontSize: 48, color: '#FFD700' },
   deceasedBadge: { position: 'absolute', bottom: -5, right: -5, backgroundColor: 'rgba(0,0,0,0.7)', borderRadius: 12, padding: 4 },
@@ -1291,42 +1448,320 @@ const styles = StyleSheet.create({
   nodeMiniatureName: { color: '#FFD700', fontSize: 12, fontWeight: 'bold', textAlign: 'center' },
   rootName: { fontSize: 14, color: '#FFD700' },
   nodeMiniatureYear: { color: 'rgba(255,255,255,0.6)', fontSize: 9, marginTop: 2 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.9)', justifyContent: 'center', alignItems: 'center' },
-  modalScrollContent: { flexGrow: 1, justifyContent: 'center', padding: 20 },
-  glassModalCard: { width: '100%', borderRadius: 28, padding: 24, borderWidth: 1, borderColor: 'rgba(255,215,0,0.3)', alignItems: 'center', backgroundColor: 'rgba(30, 30, 40, 0.95)' },
-  closeButton: { position: 'absolute', top: 16, right: 16, zIndex: 1 },
-  detailedModalAvatar: { width: 120, height: 120, borderRadius: 60, marginBottom: 16, borderWidth: 3, borderColor: '#FFD700' },
-  modalTitle: { fontSize: 24, fontWeight: 'bold', color: '#FFD700', marginBottom: 16, textAlign: 'center' },
-  lifeInfo: { flexDirection: 'row', gap: 12, marginBottom: 16, flexWrap: 'wrap', justifyContent: 'center' },
-  lifeBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,215,0,0.2)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, gap: 6 },
-  lifeText: { color: '#fff', fontSize: 14 },
-  dataMetaGrid: { width: '100%', marginBottom: 20, gap: 8 },
-  modalText: { color: 'rgba(255,255,255,0.8)', fontSize: 16, gap: 8 },
-  familyRelationsSection: { width: '100%', marginBottom: 20 },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#FFD700', marginBottom: 12, textAlign: 'center' },
-  subsectionTitle: { fontSize: 14, fontWeight: '600', color: '#FFD700', marginBottom: 8, marginTop: 8 },
-  relationCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', padding: 12, borderRadius: 12, marginBottom: 8, gap: 12 },
-  relationInfo: { flex: 1 },
-  relationLabel: { color: 'rgba(255,255,255,0.6)', fontSize: 12 },
-  relationName: { color: '#fff', fontSize: 16, fontWeight: '500' },
-  childrenSection: { marginTop: 8 },
-  childCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.03)', padding: 10, borderRadius: 10, marginBottom: 6, gap: 12 },
-  childAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(74, 144, 226, 0.3)', justifyContent: 'center', alignItems: 'center' },
-  childInitial: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
-  childInfo: { flex: 1 },
-  childName: { color: '#fff', fontSize: 14, fontWeight: '500' },
-  childYear: { color: 'rgba(255,255,255,0.5)', fontSize: 11 },
-  actionButtonRow: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', gap: 12 },
-  modalActionBtn: { flex: 1, paddingVertical: 12, borderRadius: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8 },
-  btnTxt: { color: '#fff', fontWeight: 'bold' },
-  avatarPickerTrigger: { width: 120, height: 120, borderRadius: 60, justifyContent: 'center', alignItems: 'center', marginBottom: 20, overflow: 'hidden', alignSelf: 'center' },
-  formImagePreview: { width: '100%', height: '100%' },
-  glassInput: { width: '100%', backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,215,0,0.2)', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12, color: '#fff', fontSize: 15, marginBottom: 12 },
-  dateRow: { flexDirection: 'row', gap: 12, marginBottom: 12 },
-  genderSelector: { flexDirection: 'row', gap: 12, marginBottom: 12, width: '100%' },
-  genderOption: { flex: 1, paddingVertical: 12, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8 },
-  genderOptionActive: { backgroundColor: '#FFD700' },
-  genderOptionText: { color: '#fff', fontSize: 16 },
-  genderOptionTextActive: { color: '#000', fontWeight: 'bold' },
-  formButtonActions: { flexDirection: 'row', marginTop: 12, width: '100%', gap: 12 },
+
+  // FIXED MODAL STYLES
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+
+  modalScrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingVertical: 20,
+  },
+
+  glassModalCard: {
+    width: SCREEN_WIDTH - 40,
+    maxWidth: 400,
+    maxHeight: SCREEN_HEIGHT - 80,
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,215,0,0.3)',
+    alignItems: 'center',
+    backgroundColor: 'rgba(30, 30, 40, 0.98)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+
+  closeButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    zIndex: 2,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 20,
+    padding: 6,
+  },
+
+  detailedModalAvatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: '#FFD700',
+    marginTop: 8,
+  },
+
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFD700',
+    marginBottom: 16,
+    textAlign: 'center'
+  },
+
+  lifeInfo: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+    flexWrap: 'wrap',
+    justifyContent: 'center'
+  },
+
+  lifeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,215,0,0.15)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 15,
+    gap: 4
+  },
+
+  lifeText: {
+    color: '#fff',
+    fontSize: 12
+  },
+
+  dataMetaGrid: {
+    width: '100%',
+    marginBottom: 16,
+    gap: 6
+  },
+
+  modalText: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+    gap: 6,
+    textAlign: 'center',
+  },
+
+  familyRelationsSection: {
+    width: '100%',
+    marginBottom: 16,
+    maxHeight: 220,
+  },
+
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFD700',
+    marginBottom: 10,
+    textAlign: 'center'
+  },
+
+  subsectionTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#FFD700',
+    marginBottom: 6,
+    marginTop: 6
+  },
+
+  relationCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    padding: 10,
+    borderRadius: 10,
+    marginBottom: 6,
+    gap: 10
+  },
+
+  relationInfo: {
+    flex: 1
+  },
+
+  relationLabel: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 11
+  },
+
+  relationName: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500'
+  },
+
+  childrenSection: {
+    marginTop: 6,
+  },
+
+  childCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    padding: 8,
+    borderRadius: 8,
+    marginBottom: 5,
+    gap: 10
+  },
+
+  childAvatar: {
+    width: 35,
+    height: 35,
+    borderRadius: 17.5,
+    backgroundColor: 'rgba(74, 144, 226, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+
+  childInitial: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold'
+  },
+
+  childInfo: {
+    flex: 1
+  },
+
+  childName: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '500'
+  },
+
+  childYear: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 10
+  },
+
+  actionButtonRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    width: '100%',
+    gap: 12,
+    marginTop: 8,
+  },
+
+  modalActionBtn: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 12
+  },
+
+  btnTxt: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 14
+  },
+
+  avatarPickerTrigger: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+    overflow: 'hidden',
+    alignSelf: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,215,0,0.3)',
+    backgroundColor: 'rgba(255,255,255,0.03)'
+  },
+
+  avatarPlaceholderLarge: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4
+  },
+
+  avatarPickerText: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 11,
+  },
+
+  formImagePreview: {
+    width: '100%',
+    height: '100%'
+  },
+
+  glassInput: {
+    width: '100%',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,215,0,0.2)',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    minHeight: 48,
+    color: '#fff',
+    fontSize: 14,
+    marginBottom: 12
+  },
+
+  dateRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+    width: '100%'
+  },
+
+  dateInput: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,215,0,0.2)',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    minHeight: 58,
+    color: '#fff',
+    fontSize: 14,
+  },
+
+  genderSelector: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+    width: '100%'
+  },
+
+  genderOption: {
+    flex: 1,
+    minHeight: 46,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: 'transparent'
+  },
+
+  genderOptionActive: {
+    backgroundColor: '#FFD700',
+    borderColor: '#FFD700'
+  },
+
+  genderOptionText: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14
+  },
+
+  genderOptionTextActive: {
+    color: '#000',
+    fontWeight: 'bold'
+  },
+
+  formButtonActions: {
+    flexDirection: 'row',
+    marginTop: 8,
+    width: '100%',
+    gap: 12
+  },
 });
