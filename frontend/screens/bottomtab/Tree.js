@@ -1448,7 +1448,7 @@ const styles = StyleSheet.create({
   rootName: { fontSize: 14, color: '#FFD700' },
   nodeMiniatureYear: { color: 'rgba(255,255,255,0.6)', fontSize: 9, marginTop: 2 },
 
-  // FIXED MODAL STYLES
+  
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.85)',
