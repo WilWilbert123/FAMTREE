@@ -304,8 +304,7 @@ export default function Tree() {
         if (node.spouse && !processedInGen.has(node.spouse)) {
           const spouse = nodeMap.get(node.spouse);
           if (spouse) {
-            // Position couple: spouse on the LEFT, node on the RIGHT
-            // This ensures spouse appears left side of the main person
+            
             spouse.x = currentX;
             node.x = currentX + NODE_SIZE + COUPLE_SPACING;
             spouse.y = y;
