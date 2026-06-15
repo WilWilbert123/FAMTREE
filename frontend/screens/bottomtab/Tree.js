@@ -1349,10 +1349,10 @@ export default function Tree() {
 
                 <View style={styles.dateRow}>
                   <TextInput
-                    placeholder="Birth date (DD-MM-YYYY)" // Clear format guide
+                    placeholder="Birth date (DD-MM-YYYY)" 
                     placeholderTextColor="rgba(255,255,255,0.4)"
-                    keyboardType="default" // Allows dashes
-                    maxLength={10} // Prevents over-typing
+                    keyboardType="default" 
+                    maxLength={10}
                     style={styles.dateInput}
                     value={formBirth}
                     onChangeText={setFormBirth}
