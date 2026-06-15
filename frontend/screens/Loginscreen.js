@@ -32,7 +32,7 @@ export default function LoginScreen({ navigation }) {
     try {
       const result = await dispatch(login({ email, password })).unwrap();
       if (result.success) {
-        // Navigation will happen automatically due to auth state change
+        
       }
     } catch (error) {
       Alert.alert('Login Failed', error.message || 'Invalid credentials');
