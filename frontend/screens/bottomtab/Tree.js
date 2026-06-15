@@ -290,7 +290,7 @@ export default function Tree() {
     const sortedGenerations = Array.from(generations.keys()).sort((a, b) => a - b);
     const startY = 100;
 
-    // First pass: Position couples and single nodes
+    
     sortedGenerations.forEach((gen, genIndex) => {
       const genNodes = generations.get(gen);
       const y = startY + (genIndex * GENERATION_GAP);
@@ -300,7 +300,7 @@ export default function Tree() {
       genNodes.forEach(node => {
         if (processedInGen.has(node.id)) return;
 
-        // If node has a spouse and spouse not processed yet
+        
         if (node.spouse && !processedInGen.has(node.spouse)) {
           const spouse = nodeMap.get(node.spouse);
           if (spouse) {
